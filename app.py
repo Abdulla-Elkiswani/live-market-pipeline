@@ -1,32 +1,22 @@
 import streamlit as st
-import duckdb
-import plotly.express as px
+import pandas as pd
+import requests
+import io
 
-st.set_page_config(page_title="Market Data Gateway", layout="wide")
-st.title("Market Data Gateway: Production Monitor")
 
-# Load data
-df = duckdb.connect().execute("SELECT * FROM 'data/market_data.parquet'").df()
+DATA_URL = "https://github.com/Abdulla-Elkiswani/live-market-pipeline/releases/download/v1.0.0/market_data.parquet"
 
-# Sidebar: Filters
-st.sidebar.header("Filters")
-countries = st.sidebar.multiselect(
-    "Select Countries", options=df['country'].unique(), default=df['country'].unique())
 
-# Filter data
-filtered_df = df[df['country'].isin(countries)]
+@st.cache_data(ttl=600)
+def load_data(url):
+    response = requests.get(url)
+    response.raise_for_status()  # Good practice to check if the download worked
+    return pd.read_parquet(io.BytesIO(response.content))
 
-# Dashboard Metrics
-col1, col2 = st.columns(2)
-col1.metric("Total Jobs Monitored", len(filtered_df))
-col2.metric("Average Salary", f"€{filtered_df['salary_eur'].mean():,.0f}")
 
-# Visuals
-st.subheader("Salary Distribution by Job Title")
-fig = px.bar(filtered_df, x='job_title', y='salary_eur',
-             color='country', barmode='group')
-st.plotly_chart(fig, use_container_width=True)
-
-# Data Table
-st.subheader("Raw Data")
-st.dataframe(filtered_df, use_container_width=True)
+# Load data with error handling
+try:
+    df = load_data(DATA_URL)
+except Exception as e:
+    st.error(f"Could not load data: {e}")
+    st.stop()
