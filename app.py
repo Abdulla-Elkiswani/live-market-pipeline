@@ -1,6 +1,10 @@
 import streamlit as st
 import duckdb
 import os
+import duckdb
+# DuckDB can query Parquet files directly without a database file
+conn = duckdb.connect()
+df = conn.execute("SELECT * FROM 'market_data.parquet'").df()
 
 # 1. Page Configuration
 st.set_page_config(page_title="Market Data Gateway", layout="wide")
