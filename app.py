@@ -1,43 +1,32 @@
 import streamlit as st
 import duckdb
-import os
+import plotly.express as px
 
-# 1. Page Configuration
 st.set_page_config(page_title="Market Data Gateway", layout="wide")
-
-# 2. UI Header
 st.title("Market Data Gateway: Production Monitor")
 
-# 3. Path to the Parquet data file
-data_path = 'data/market_data.parquet'
+# Load data
+df = duckdb.connect().execute("SELECT * FROM 'data/market_data.parquet'").df()
 
-# 4. Data Loading Logic
+# Sidebar: Filters
+st.sidebar.header("Filters")
+countries = st.sidebar.multiselect(
+    "Select Countries", options=df['country'].unique(), default=df['country'].unique())
 
+# Filter data
+filtered_df = df[df['country'].isin(countries)]
 
-def load_data(path):
-    if not os.path.exists(path):
-        return None
-    try:
-        # DuckDB can query Parquet files directly
-        conn = duckdb.connect()
-        df = conn.execute(f"SELECT * FROM '{path}'").df()
-        conn.close()
-        return df
-    except Exception as e:
-        st.error(f"Error loading data: {e}")
-        return None
+# Dashboard Metrics
+col1, col2 = st.columns(2)
+col1.metric("Total Jobs Monitored", len(filtered_df))
+col2.metric("Average Salary", f"€{filtered_df['salary_eur'].mean():,.0f}")
 
+# Visuals
+st.subheader("Salary Distribution by Job Title")
+fig = px.bar(filtered_df, x='job_title', y='salary_eur',
+             color='country', barmode='group')
+st.plotly_chart(fig, use_container_width=True)
 
-# 5. Display the data
-df = load_data(data_path)
-
-if df is not None:
-    st.success("Data loaded successfully!")
-    st.dataframe(df, use_container_width=True)
-else:
-    st.warning(
-        "Data file not found. Ensure 'data/market_data.parquet' is in the repository.")
-    st.info(
-        "If you just pushed your changes, wait a moment for the redeployment to finish.")
-
-#
+# Data Table
+st.subheader("Raw Data")
+st.dataframe(filtered_df, use_container_width=True)
