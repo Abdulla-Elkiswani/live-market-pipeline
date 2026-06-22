@@ -1,0 +1,4 @@
+name: production_data
+type: duckdb
+options:
+  filename: ../../../data/processed/market_data.duckdb
