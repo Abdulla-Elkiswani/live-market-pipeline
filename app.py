@@ -1,10 +1,6 @@
 import streamlit as st
 import duckdb
 import os
-import duckdb
-# DuckDB can query Parquet files directly without a database file
-conn = duckdb.connect()
-df = conn.execute("SELECT * FROM 'market_data.parquet'").df()
 
 # 1. Page Configuration
 st.set_page_config(page_title="Market Data Gateway", layout="wide")
@@ -12,16 +8,36 @@ st.set_page_config(page_title="Market Data Gateway", layout="wide")
 # 2. UI Header
 st.title("Market Data Gateway: Production Monitor")
 
-# 3. Safe Database Connection
-db_path = 'data/processed/market_data.duckdb'
+# 3. Path to the Parquet data file
+data_path = 'data/market_data.parquet'
 
-if os.path.exists(db_path):
+# 4. Data Loading Logic
+
+
+def load_data(path):
+    if not os.path.exists(path):
+        return None
     try:
-        conn = duckdb.connect(db_path, read_only=True)
-        # Add your dashboard display code here
-        st.success("Database connected successfully!")
+        # DuckDB can query Parquet files directly
+        conn = duckdb.connect()
+        df = conn.execute(f"SELECT * FROM '{path}'").df()
+        conn.close()
+        return df
     except Exception as e:
-        st.error(f"Error connecting to database: {e}")
+        st.error(f"Error loading data: {e}")
+        return None
+
+
+# 5. Display the data
+df = load_data(data_path)
+
+if df is not None:
+    st.success("Data loaded successfully!")
+    st.dataframe(df, use_container_width=True)
 else:
-    st.warning(f"Database file not found at {db_path}.")
-    st.info("The dashboard is currently in monitor-only mode. Please ensure the data pipeline is running.")
+    st.warning(
+        "Data file not found. Ensure 'data/market_data.parquet' is in the repository.")
+    st.info(
+        "If you just pushed your changes, wait a moment for the redeployment to finish.")
+
+#
