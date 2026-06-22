@@ -1,0 +1,8 @@
+#!/bin/bash
+# This script uploads the new parquet file to your v1.0.0 release
+
+echo "Uploading new data to GitHub Release..."
+
+gh release upload v1.0.0 data/market_data.parquet --clobber
+
+echo "Done! The app will fetch the update in 10 minutes."
